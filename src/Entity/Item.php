@@ -1,11 +1,8 @@
 <?php
-// src/Entity/Item.php
-
 namespace App\Entity;
 
 use App\Repository\ItemRepository;
 use Doctrine\ORM\Mapping as ORM;
-use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity(repositoryClass: ItemRepository::class)]
 #[ORM\Table(name: 'items')]
@@ -13,33 +10,30 @@ class Item
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
-    #[ORM\Column(type: 'integer')]
+    #[ORM\Column]
     private ?int $id = null;
 
-    #[ORM\Column(type: 'string', length: 255)]
-    #[Assert\NotBlank]
-    private string $title;
+    #[ORM\Column(length: 255)]
+    private ?string $title = null;
 
     #[ORM\Column(type: 'text', nullable: true)]
     private ?string $content = null;
 
-    #[ORM\Column(type: 'string', length: 500, nullable: true)]
-    #[Assert\Url]
+    #[ORM\Column(length: 500, nullable: true)]
     private ?string $url = null;
 
-    #[ORM\Column(type: 'string', length: 50)]
-    #[Assert\Choice(choices: ['article', 'video', 'note', 'email', 'podcast'])]
-    private string $type = 'note';
+    #[ORM\Column(length: 50)]
+    private ?string $type = 'note';
 
-    #[ORM\Column(type: 'string', length: 50, nullable: true)]
+    #[ORM\Column(length: 50, nullable: true)]
     private ?string $source = null;
 
-    #[ORM\Column(type: 'datetime_immutable')]
-    private \DateTimeImmutable $createdAt;
+    #[ORM\Column]
+    private ?\DateTimeImmutable $createdAt = null;
 
-    #[ORM\ManyToOne(targetEntity: User::class, inversedBy: 'items')]
+    #[ORM\ManyToOne(inversedBy: 'items')]
     #[ORM\JoinColumn(nullable: false)]
-    private User $user;
+    private ?User $user = null;
 
     public function __construct()
     {
@@ -51,12 +45,12 @@ class Item
         return $this->id;
     }
 
-    public function getTitle(): string
+    public function getTitle(): ?string
     {
         return $this->title;
     }
 
-    public function setTitle(string $title): self
+    public function setTitle(string $title): static
     {
         $this->title = $title;
         return $this;
@@ -67,7 +61,7 @@ class Item
         return $this->content;
     }
 
-    public function setContent(?string $content): self
+    public function setContent(?string $content): static
     {
         $this->content = $content;
         return $this;
@@ -78,18 +72,18 @@ class Item
         return $this->url;
     }
 
-    public function setUrl(?string $url): self
+    public function setUrl(?string $url): static
     {
         $this->url = $url;
         return $this;
     }
 
-    public function getType(): string
+    public function getType(): ?string
     {
         return $this->type;
     }
 
-    public function setType(string $type): self
+    public function setType(string $type): static
     {
         $this->type = $type;
         return $this;
@@ -100,23 +94,23 @@ class Item
         return $this->source;
     }
 
-    public function setSource(?string $source): self
+    public function setSource(?string $source): static
     {
         $this->source = $source;
         return $this;
     }
 
-    public function getCreatedAt(): \DateTimeImmutable
+    public function getCreatedAt(): ?\DateTimeImmutable
     {
         return $this->createdAt;
     }
 
-    public function getUser(): User
+    public function getUser(): ?User
     {
         return $this->user;
     }
 
-    public function setUser(User $user): self
+    public function setUser(?User $user): static
     {
         $this->user = $user;
         return $this;
