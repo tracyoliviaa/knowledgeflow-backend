@@ -1,11 +1,14 @@
 <?php
+// src/Entity/Item.php
+
 namespace App\Entity;
 
 use App\Repository\ItemRepository;
+use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: ItemRepository::class)]
-#[ORM\Table(name: 'items')]
+#[ORM\Table(name: '`items`')]
 class Item
 {
     #[ORM\Id]
@@ -16,16 +19,16 @@ class Item
     #[ORM\Column(length: 255)]
     private ?string $title = null;
 
-    #[ORM\Column(type: 'text', nullable: true)]
+    #[ORM\Column(type: Types::TEXT, nullable: true)]
     private ?string $content = null;
+
+    #[ORM\Column(length: 50)]
+    private ?string $type = null;
 
     #[ORM\Column(length: 500, nullable: true)]
     private ?string $url = null;
 
-    #[ORM\Column(length: 50)]
-    private ?string $type = 'note';
-
-    #[ORM\Column(length: 50, nullable: true)]
+    #[ORM\Column(length: 255, nullable: true)]
     private ?string $source = null;
 
     #[ORM\Column]
@@ -67,17 +70,6 @@ class Item
         return $this;
     }
 
-    public function getUrl(): ?string
-    {
-        return $this->url;
-    }
-
-    public function setUrl(?string $url): static
-    {
-        $this->url = $url;
-        return $this;
-    }
-
     public function getType(): ?string
     {
         return $this->type;
@@ -86,6 +78,17 @@ class Item
     public function setType(string $type): static
     {
         $this->type = $type;
+        return $this;
+    }
+
+    public function getUrl(): ?string
+    {
+        return $this->url;
+    }
+
+    public function setUrl(?string $url): static
+    {
+        $this->url = $url;
         return $this;
     }
 
@@ -103,6 +106,12 @@ class Item
     public function getCreatedAt(): ?\DateTimeImmutable
     {
         return $this->createdAt;
+    }
+
+    public function setCreatedAt(\DateTimeImmutable $createdAt): static
+    {
+        $this->createdAt = $createdAt;
+        return $this;
     }
 
     public function getUser(): ?User
