@@ -1,5 +1,5 @@
-# Use PHP 8.2 with Apache
-FROM php:8.2-apache
+# Try PHP 8.4 Apache first, fallback to CLI with Apache installation
+FROM php:8.4-apache
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
@@ -11,10 +11,11 @@ RUN apt-get update && apt-get install -y \
     zip \
     unzip \
     libpq-dev \
+    libzip-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Install PHP extensions
-RUN docker-php-ext-install pdo pdo_mysql pdo_pgsql mbstring exif pcntl bcmath gd
+RUN docker-php-ext-install pdo pdo_mysql pdo_pgsql mbstring exif pcntl bcmath gd zip
 
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
