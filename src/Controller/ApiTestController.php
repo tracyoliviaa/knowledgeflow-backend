@@ -20,31 +20,7 @@ class ApiTestController extends AbstractController
         ]);
     }
 
-    #[Route('/login', name: 'login', methods: ['POST'])]
-    public function login(): JsonResponse
-    {
-        // Temporärer Test-Login (ohne echte Authentifizierung)
-        return $this->json([
-            'token' => 'test-token-123',
-            'user' => [
-                'id' => 1,
-                'email' => 'test@example.com'
-            ]
-        ]);
-    }
-
-    #[Route('/register', name: 'register', methods: ['POST'])]
-    public function register(): JsonResponse
-    {
-        return $this->json([
-            'token' => 'test-token-456',
-            'user' => [
-                'id' => 2,
-                'email' => 'new@example.com'
-            ]
-        ]);
-    }
-
+   
     #[Route('/user', name: 'user', methods: ['GET'])]
     public function user(): JsonResponse
     {

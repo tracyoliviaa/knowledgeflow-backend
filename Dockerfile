@@ -50,17 +50,20 @@ ENV APP_DEBUG=0
 RUN composer install --no-interaction --prefer-dist --no-scripts --no-dev
 
 # -------------------------------
-# 9️⃣  Symfony Cache & Skripte
+# 9️⃣  Symfony-Autoskripte ausführen (cache:clear etc.)
 # -------------------------------
-RUN composer run-script auto-scripts \
- && composer dump-autoload --optimize --classmap-authoritative
+RUN composer run-script auto-scripts
 
 # -------------------------------
-# 🔟  Rechte für Cache & Logs
+# 🔄  Clear and warm cache for production
 # -------------------------------
-RUN mkdir -p var/cache var/log \
-    && chown -R www-data:www-data var/ public/
+RUN php bin/console cache:clear --env=prod --no-debug --no-warmup
+RUN php bin/console cache:warmup --env=prod --no-debug
 
+# -------------------------------
+# 🔟  Autoloader optimieren
+# -------------------------------
+RUN composer dump-autoload --optimize --classmap-authoritative
 # -------------------------------
 # 1️⃣1️⃣  Apache-Konfiguration
 # -------------------------------
