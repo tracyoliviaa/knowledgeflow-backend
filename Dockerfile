@@ -1,10 +1,10 @@
 # -------------------------------
-# 1️⃣  Base Image
+# 1️⃣  Base Image – PHP 8.4 Apache
 # -------------------------------
 FROM php:8.4-apache
 
 # -------------------------------
-# 2️⃣  Systemabhängigkeiten
+# 2️⃣  Systemabhängigkeiten installieren
 # -------------------------------
 RUN apt-get update && apt-get install -y \
     git \
@@ -39,50 +39,48 @@ WORKDIR /var/www/html
 COPY . .
 
 # -------------------------------
-# 7️⃣  PHP-Konfiguration: Produktionsumgebung festlegen
+# 7️⃣  Produktionsumgebung konfigurieren
 # -------------------------------
 ENV APP_ENV=prod
 ENV APP_DEBUG=0
 
 # -------------------------------
-# 8️⃣  Composer-Installation (ohne dev & ohne auto-scripts)
+# 8️⃣  Abhängigkeiten installieren (ohne dev)
 # -------------------------------
 RUN composer install --no-interaction --prefer-dist --no-scripts --no-dev
 
 # -------------------------------
-# 9️⃣  Symfony-Autoskripte ausführen (cache:clear etc.)
+# 9️⃣  Symfony Cache & Skripte
 # -------------------------------
-RUN composer run-script auto-scripts
+RUN composer run-script auto-scripts \
+ && composer dump-autoload --optimize --classmap-authoritative
 
 # -------------------------------
-# 🔟  Autoloader optimieren
-# -------------------------------
-RUN composer dump-autoload --optimize --classmap-authoritative
-
-# -------------------------------
-# 1️⃣1️⃣  Dateiberechtigungen setzen
+# 🔟  Rechte für Cache & Logs
 # -------------------------------
 RUN mkdir -p var/cache var/log \
     && chown -R www-data:www-data var/ public/
 
 # -------------------------------
-# 1️⃣2️⃣  Apache-Konfiguration aktivieren
+# 1️⃣1️⃣  Apache-Konfiguration
 # -------------------------------
 RUN a2enmod rewrite
 
 ENV APACHE_DOCUMENT_ROOT=/var/www/html/public
-RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-available/*.conf \
-    && sed -ri -e 's!/var/www/!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/apache2.conf /etc/apache2/conf-available/*.conf
 
+RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-available/*.conf \
+ && sed -ri -e 's!/var/www/!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/apache2.conf /etc/apache2/conf-available/*.conf
+
+# Symfony: .htaccess aktivieren
 RUN echo '<Directory /var/www/html/public>\n\
     Options -Indexes +FollowSymLinks\n\
     AllowOverride All\n\
     Require all granted\n\
 </Directory>' > /etc/apache2/conf-available/symfony.conf \
-    && a2enconf symfony
+ && a2enconf symfony
 
 # -------------------------------
-# 1️⃣3️⃣  Port öffnen & Server starten
+# 1️⃣2️⃣  Port öffnen & Server starten
 # -------------------------------
 EXPOSE 80
 CMD ["apache2-foreground"]
