@@ -1,4 +1,4 @@
-
+# Use PHP 8.2 with Apache
 FROM php:8.4-cli
 
 # Install system dependencies
@@ -22,11 +22,19 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 # Set working directory
 WORKDIR /var/www/html
 
+# Copy composer files first
+COPY composer.json composer.lock ./
+
+# Install dependencies with dev first (to clear cache), then remove dev
+RUN composer install --no-interaction --prefer-dist \
+    && composer dump-autoload --optimize --no-dev --classmap-authoritative
+
 # Copy application files
 COPY . .
 
-# Install dependencies
-RUN composer install --no-dev --optimize-autoloader --no-interaction
+# Clear and warm up cache for production
+RUN php bin/console cache:clear --env=prod --no-debug \
+    && php bin/console cache:warmup --env=prod --no-debug
 
 # Set permissions
 RUN chown -R www-data:www-data /var/www/html/var /var/www/html/public
