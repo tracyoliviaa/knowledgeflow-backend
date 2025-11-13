@@ -1,10 +1,10 @@
 # -------------------------------
-# 1️⃣  Base Image – PHP 8.4 Apache
+# 1️⃣  Base Image
 # -------------------------------
 FROM php:8.4-apache
 
 # -------------------------------
-# 2️⃣  Systemabhängigkeiten installieren
+# 2️⃣  Systemabhängigkeiten
 # -------------------------------
 RUN apt-get update && apt-get install -y \
     git \
@@ -39,56 +39,70 @@ WORKDIR /var/www/html
 COPY . .
 
 # -------------------------------
-# 7️⃣  Produktionsumgebung konfigurieren
+# 🔐  Generate JWT Keys
+# -------------------------------
+RUN mkdir -p config/jwt && \
+    openssl genpkey -out config/jwt/private.pem -algorithm rsa -pkeyopt rsa_keygen_bits:4096 && \
+    openssl pkey -in config/jwt/private.pem -out config/jwt/public.pem -pubout && \
+    chown -R www-data:www-data config/jwt
+
+# -------------------------------
+# 7️⃣  PHP-Konfiguration: Produktionsumgebung festlegen
 # -------------------------------
 ENV APP_ENV=prod
 ENV APP_DEBUG=0
 
 # -------------------------------
-# 8️⃣  Abhängigkeiten installieren (ohne dev)
+# 8️⃣  Composer-Installation (ohne dev & ohne auto-scripts)
 # -------------------------------
 RUN composer install --no-interaction --prefer-dist --no-scripts --no-dev
 
 # -------------------------------
-# 9️⃣  Symfony-Autoskripte ausführen
+# 9️⃣  Symfony-Autoskripte ausführen (cache:clear etc.)
 # -------------------------------
 RUN composer run-script auto-scripts
 
 # -------------------------------
-# 🔄  Clear and warm cache
+# 🔄  Clear and warm cache for production
 # -------------------------------
 RUN php bin/console cache:clear --env=prod --no-debug --no-warmup
 RUN php bin/console cache:warmup --env=prod --no-debug
 
 # -------------------------------
-# 🗄️  Run Database Migrations  (ADD THIS)
-# -------------------------------
-RUN php bin/console doctrine:migrations:migrate --no-interaction --env=prod || true
-
-# -------------------------------
 # 🔟  Autoloader optimieren
 # -------------------------------
 RUN composer dump-autoload --optimize --classmap-authoritative
+
 # -------------------------------
-# 1️⃣1️⃣  Apache-Konfiguration
+# 1️⃣1️⃣  Dateiberechtigungen setzen
+# -------------------------------
+RUN mkdir -p var/cache var/log \
+    && chown -R www-data:www-data var/ public/
+
+# -------------------------------
+# 1️⃣2️⃣  Apache-Konfiguration aktivieren
 # -------------------------------
 RUN a2enmod rewrite
 
 ENV APACHE_DOCUMENT_ROOT=/var/www/html/public
-
 RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-available/*.conf \
- && sed -ri -e 's!/var/www/!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/apache2.conf /etc/apache2/conf-available/*.conf
+    && sed -ri -e 's!/var/www/!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/apache2.conf /etc/apache2/conf-available/*.conf
 
-# Symfony: .htaccess aktivieren
 RUN echo '<Directory /var/www/html/public>\n\
     Options -Indexes +FollowSymLinks\n\
     AllowOverride All\n\
     Require all granted\n\
 </Directory>' > /etc/apache2/conf-available/symfony.conf \
- && a2enconf symfony
+    && a2enconf symfony
 
 # -------------------------------
-# 1️⃣2️⃣  Port öffnen & Server starten
+# 📜 Copy entrypoint script
+# -------------------------------
+COPY docker-entrypoint.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
+# -------------------------------
+# 1️⃣3️⃣  Port öffnen & Server starten
 # -------------------------------
 EXPOSE 80
-CMD ["apache2-foreground"]
+ENTRYPOINT ["docker-entrypoint.sh"]
