@@ -50,15 +50,20 @@ ENV APP_DEBUG=0
 RUN composer install --no-interaction --prefer-dist --no-scripts --no-dev
 
 # -------------------------------
-# 9️⃣  Symfony-Autoskripte ausführen (cache:clear etc.)
+# 9️⃣  Symfony-Autoskripte ausführen
 # -------------------------------
 RUN composer run-script auto-scripts
 
 # -------------------------------
-# 🔄  Clear and warm cache for production
+# 🔄  Clear and warm cache
 # -------------------------------
 RUN php bin/console cache:clear --env=prod --no-debug --no-warmup
 RUN php bin/console cache:warmup --env=prod --no-debug
+
+# -------------------------------
+# 🗄️  Run Database Migrations  (ADD THIS)
+# -------------------------------
+RUN php bin/console doctrine:migrations:migrate --no-interaction --env=prod || true
 
 # -------------------------------
 # 🔟  Autoloader optimieren
