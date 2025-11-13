@@ -28,19 +28,29 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column]
     private ?string $password = null;
 
+    #[ORM\Column]
+    private ?\DateTimeImmutable $createdAt = null;
+
     #[ORM\OneToMany(mappedBy: 'user', targetEntity: Item::class, orphanRemoval: true)]
     private Collection $items;
 
     public function __construct()
     {
         $this->items = new ArrayCollection();
+        $this->createdAt = new \DateTimeImmutable(); // automatisch beim Anlegen
     }
 
+    // -----------------------------
+    // ID
+    // -----------------------------
     public function getId(): ?int
     {
         return $this->id;
     }
 
+    // -----------------------------
+    // EMAIL
+    // -----------------------------
     public function getEmail(): ?string
     {
         return $this->email;
@@ -52,11 +62,17 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return $this;
     }
 
+    // -----------------------------
+    // USER IDENTIFIER
+    // -----------------------------
     public function getUserIdentifier(): string
     {
         return (string) $this->email;
     }
 
+    // -----------------------------
+    // ROLES
+    // -----------------------------
     public function getRoles(): array
     {
         $roles = $this->roles;
@@ -70,6 +86,9 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return $this;
     }
 
+    // -----------------------------
+    // PASSWORD
+    // -----------------------------
     public function getPassword(): string
     {
         return $this->password;
@@ -83,9 +102,26 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
     public function eraseCredentials(): void
     {
-        // If you store any temporary, sensitive data on the user, clear it here
+        // Sensible temporäre Daten hier löschen, falls vorhanden
     }
 
+    // -----------------------------
+    // CREATED_AT
+    // -----------------------------
+    public function getCreatedAt(): ?\DateTimeImmutable
+    {
+        return $this->createdAt;
+    }
+
+    public function setCreatedAt(\DateTimeImmutable $createdAt): static
+    {
+        $this->createdAt = $createdAt;
+        return $this;
+    }
+
+    // -----------------------------
+    // ITEMS RELATION
+    // -----------------------------
     /**
      * @return Collection<int, Item>
      */
