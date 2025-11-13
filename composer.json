@@ -4,7 +4,7 @@
     "minimum-stability": "stable",
     "prefer-stable": true,
     "require": {
-        "php": ">=8.2",
+        "php": ">=8.3",
         "ext-ctype": "*",
         "ext-iconv": "*",
         "doctrine/dbal": "^3",
@@ -79,6 +79,7 @@
     },
     "require-dev": {
         "phpunit/phpunit": "^12.4",
+        "symfony/debug-bundle": "7.3.*",
         "symfony/maker-bundle": "^1.64",
         "symfony/phpunit-bridge": "^7.3"
     }
