@@ -1,14 +1,8 @@
 nelmio_cors:
     defaults:
         origin_regex: true
-        allow_origin: ['^https?://(knowledgeflow-frontend\.vercel\.app|localhost|127\.0\.0\.1)(:[0-9]+)?$']
+        allow_origin: ['*']  # Temporarily allow all for testing
         allow_methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS']
         allow_headers: ['Content-Type', 'Authorization']
         expose_headers: ['Link']
         max_age: 3600
-    paths:
-        '^/api':
-            allow_origin: ['^https?://(knowledgeflow-frontend\.vercel\.app|localhost|127\.0\.0\.1)(:[0-9]+)?$']
-            allow_methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS']
-            allow_headers: ['Content-Type', 'Authorization']
-            max_age: 3600
