@@ -1,4 +1,3 @@
-# public/.htaccess
 DirectoryIndex index.php
 
 <IfModule mod_negotiation.c>
@@ -8,15 +7,12 @@ DirectoryIndex index.php
 <IfModule mod_rewrite.c>
     RewriteEngine On
 
-    # Redirect to URI without front controller to prevent duplicate content
     RewriteCond %{REQUEST_URI}::$0 ^(/.+)/(.*)::\2$
     RewriteRule .* - [E=BASE:%1]
 
-    # Sets the HTTP_AUTHORIZATION header removed by Apache
     RewriteCond %{HTTP:Authorization} .+
     RewriteRule ^ - [E=HTTP_AUTHORIZATION:%0]
 
-    # Redirect to index.php if file/directory doesn't exist
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteRule ^ %{ENV:BASE}/index.php [L]
@@ -27,10 +23,3 @@ DirectoryIndex index.php
         RedirectMatch 307 ^/$ /index.php/
     </IfModule>
 </IfModule>
-```
-
-### Step 2: Update Backend Environment in Render
-
-I see you have `CORS_ALLOW_ORIGIN` but it needs the correct format. Update it to:
-```
-CORS_ALLOW_ORIGIN=^https?://(knowledgeflow-frontend\.vercel\.app|localhost)(:[0-9]+)?$
