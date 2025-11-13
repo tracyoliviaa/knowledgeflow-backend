@@ -1,5 +1,5 @@
 # Use PHP 8.2 with Apache
-FROM php:8.4-cli
+FROM php:8.2-apache
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
@@ -22,33 +22,33 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 # Set working directory
 WORKDIR /var/www/html
 
-# Copy composer files first
-COPY composer.json composer.lock ./
-
-# Install dependencies with dev first (to clear cache), then remove dev
-RUN composer install --no-interaction --prefer-dist \
-    && composer dump-autoload --optimize --no-dev --classmap-authoritative
-
-# Copy application files
+# Copy ALL application files first (including bin/console)
 COPY . .
 
-# Clear and warm up cache for production
-RUN php bin/console cache:clear --env=prod --no-debug \
-    && php bin/console cache:warmup --env=prod --no-debug
+# Install dependencies WITHOUT running auto-scripts
+RUN composer install --no-interaction --prefer-dist --no-scripts
+
+# Now run auto-scripts (cache:clear will work because bin/console exists)
+RUN composer run-script auto-scripts
+
+# Optimize autoloader
+RUN composer dump-autoload --optimize --classmap-authoritative
 
 # Set permissions
-RUN chown -R www-data:www-data /var/www/html/var /var/www/html/public
+RUN mkdir -p var/cache var/log \
+    && chown -R www-data:www-data var/ public/
 
 # Enable Apache mod_rewrite
 RUN a2enmod rewrite
 
-# Configure Apache DocumentRoot to point to public/
+# Configure Apache DocumentRoot
 ENV APACHE_DOCUMENT_ROOT=/var/www/html/public
-RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-available/*.conf
-RUN sed -ri -e 's!/var/www/!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/apache2.conf /etc/apache2/conf-available/*.conf
+RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-available/*.conf \
+    && sed -ri -e 's!/var/www/!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/apache2.conf /etc/apache2/conf-available/*.conf
 
 # Add Apache configuration for Symfony
 RUN echo '<Directory /var/www/html/public>\n\
+    Options -Indexes +FollowSymLinks\n\
     AllowOverride All\n\
     Require all granted\n\
 </Directory>' > /etc/apache2/conf-available/symfony.conf \
