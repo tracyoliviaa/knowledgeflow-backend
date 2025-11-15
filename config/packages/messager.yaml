@@ -1,0 +1,15 @@
+# config/packages/messenger.yaml
+framework:
+    messenger:
+        transports:
+            async:
+                dsn: '%env(MESSENGER_TRANSPORT_DSN)%'
+                options:
+                    queue_name: ai_processing
+                retry_strategy:
+                    max_retries: 3
+                    delay: 1000 # 1 Sekunde
+                    multiplier: 2 # Exponentielles Backoff
+
+        routing:
+            'App\Message\ProcessItemWithAI': async
