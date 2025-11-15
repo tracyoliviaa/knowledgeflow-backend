@@ -35,6 +35,7 @@ security:
             provider: app_user_provider
 
     access_control:
+        - { path: ^/api/ai, roles: PUBLIC_ACCESS } 
         - { path: ^/api/test, roles: PUBLIC_ACCESS }
         - { path: ^/api/register, roles: PUBLIC_ACCESS }
         - { path: ^/api/login, roles: PUBLIC_ACCESS }

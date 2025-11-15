@@ -1,14 +1,27 @@
+parameters:
+    openai_api_key: '%env(OPENAI_API_KEY)%'
+    openai_model: '%env(OPENAI_MODEL)%'
+
 services:
     _defaults:
         autowire: true
         autoconfigure: true
 
+    App\:
+        resource: '../src/'
+
     App\Service\OpenAIService:
         arguments:
-            $apiKey: '%env(OPENAI_API_KEY)%'
-            $model: '%env(OPENAI_MODEL)%'
+            $apiKey: '%openai_api_key%'
+            $model: '%openai_model%'
 
-    # Optional: weitere Service-Definitionen, z.B.:
-    # App\:
-    #     resource: '../src/'
-    #     exclude: '../src/{DependencyInjection,Entity,Kernel.php}'
+    App\Service\EmbeddingService:
+        arguments:
+            $apiKey: '%openai_api_key%'
+
+    App\MessageHandler\ProcessItemWithAIHandler: ~
+
+    # Controller Fix: OpenAI API-Key injizieren
+    App\Controller\LearningModeController:
+        arguments:
+            $openaiApiKey: '%openai_api_key%'
