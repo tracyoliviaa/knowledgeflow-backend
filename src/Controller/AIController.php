@@ -1,39 +1,66 @@
 <?php
+// src/Controller/AIUsageController.php
+
 namespace App\Controller;
 
-use App\Service\OpenAIService;
+use App\Repository\AIUsageRepository;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
-use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Security\Http\Attribute\IsGranted;
 
-class AIController extends AbstractController
+#[Route('/api/ai')]
+#[IsGranted('ROLE_USER')]
+class AIUsageController extends AbstractController
 {
     public function __construct(
-        private OpenAIService $aiService
+        private AIUsageRepository $usageRepo
     ) {}
 
-    #[Route('/api/ai/test', name: 'ai_test', methods: ['POST', 'GET'])]
-    public function test(Request $request): JsonResponse
+    #[Route('/usage-stats', methods: ['GET'])]
+    public function getUsageStats(): JsonResponse
     {
-        if ($request->getMethod() === 'GET') {
-            return $this->json(['message' => 'AI Controller works! Use POST with {"text":"..."}']);
-        }
+        $user = $this->getUser();
 
-        $data = json_decode($request->getContent(), true);
-        $text = $data['text'] ?? 'Hallo Welt';
+        // Current month statistics
+        $currentMonthCost = $this->usageRepo->getCurrentMonthCost($user);
+        $currentMonthStats = $this->usageRepo->getCurrentMonthStats($user);
 
-        try {
-            $summary = $this->aiService->summarize($text);
-            return $this->json([
-                'success' => true,
-                'summary' => $summary
-            ]);
-        } catch (\Exception $e) {
-            return $this->json([
-                'success' => false,
-                'error' => $e->getMessage()
-            ], 500);
-        }
+        // All-time statistics
+        $allTimeStats = $this->usageRepo->getTotalStats($user);
+
+        return $this->json([
+            'current_month' => [
+                'total_cost' => $currentMonthCost,
+                'operations' => $currentMonthStats,
+            ],
+            'all_time' => [
+                'total_requests' => (int) $allTimeStats['total_requests'],
+                'total_input_tokens' => (int) $allTimeStats['total_input_tokens'],
+                'total_output_tokens' => (int) $allTimeStats['total_output_tokens'],
+                'total_tokens' => (int) $allTimeStats['total_input_tokens'] + (int) $allTimeStats['total_output_tokens'],
+                'total_cost' => (float) $allTimeStats['total_cost'],
+            ]
+        ]);
+    }
+
+    #[Route('/usage-limit', methods: ['GET'])]
+    public function checkUsageLimit(): JsonResponse
+    {
+        $user = $this->getUser();
+        $currentMonthCost = $this->usageRepo->getCurrentMonthCost($user);
+
+        // Example: $10/month limit
+        $limit = 10.00;
+        $remaining = max(0, $limit - $currentMonthCost);
+        $percentage = min(100, ($currentMonthCost / $limit) * 100);
+
+        return $this->json([
+            'limit' => $limit,
+            'used' => $currentMonthCost,
+            'remaining' => $remaining,
+            'percentage' => $percentage,
+            'exceeded' => $currentMonthCost >= $limit,
+        ]);
     }
 }
