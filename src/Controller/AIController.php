@@ -30,7 +30,8 @@ class AIController extends AbstractController
         $text = $data['text'] ?? 'Hallo Welt';
 
         try {
-            $summary = $this->aiService->summarize($text);
+            // Fixed: provide both required arguments
+            $summary = $this->aiService->summarize($text, $this->getUser());
             return $this->json([
                 'success' => true,
                 'summary' => $summary
