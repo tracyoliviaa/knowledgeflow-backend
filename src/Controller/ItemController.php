@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Controller;
 
 use App\Entity\Item;
@@ -21,14 +22,30 @@ class ItemController extends AbstractController
         return $this->json(['data' => array_map([$this, 'serialize'], $items)]);
     }
 
+    #[Route('/{id}', methods: ['GET'])]
+    public function show(int $id, ItemRepository $repository): JsonResponse
+    {
+        $item = $repository->find($id);
+        
+        if (!$item || $item->getUser() !== $this->getUser()) {
+            return $this->json(['error' => 'Item not found'], 404);
+        }
+        
+        return $this->json(['data' => $this->serialize($item)]);
+    }
+
     #[Route('', methods: ['POST'])]
     public function create(Request $request, EntityManagerInterface $em): JsonResponse
     {
         $data = json_decode($request->getContent(), true);
         
+        if (!isset($data['title'])) {
+            return $this->json(['error' => 'Title is required'], 400);
+        }
+        
         $item = new Item();
-        $item->setTitle($data['title'] ?? 'Untitled');
-        $item->setContent($data['content'] ?? null);
+        $item->setTitle($data['title']);
+        $item->setContent($data['content'] ?? '');
         $item->setType($data['type'] ?? 'note');
         $item->setUser($this->getUser());
 
@@ -36,6 +53,47 @@ class ItemController extends AbstractController
         $em->flush();
 
         return $this->json(['data' => $this->serialize($item)], 201);
+    }
+
+    #[Route('/{id}', methods: ['PUT', 'PATCH'])]
+    public function update(int $id, Request $request, ItemRepository $repository, EntityManagerInterface $em): JsonResponse
+    {
+        $item = $repository->find($id);
+        
+        if (!$item || $item->getUser() !== $this->getUser()) {
+            return $this->json(['error' => 'Item not found'], 404);
+        }
+        
+        $data = json_decode($request->getContent(), true);
+        
+        if (isset($data['title'])) {
+            $item->setTitle($data['title']);
+        }
+        if (isset($data['content'])) {
+            $item->setContent($data['content']);
+        }
+        if (isset($data['type'])) {
+            $item->setType($data['type']);
+        }
+        
+        $em->flush();
+        
+        return $this->json(['data' => $this->serialize($item)]);
+    }
+
+    #[Route('/{id}', methods: ['DELETE'])]
+    public function delete(int $id, ItemRepository $repository, EntityManagerInterface $em): JsonResponse
+    {
+        $item = $repository->find($id);
+        
+        if (!$item || $item->getUser() !== $this->getUser()) {
+            return $this->json(['error' => 'Item not found'], 404);
+        }
+        
+        $em->remove($item);
+        $em->flush();
+        
+        return $this->json(['message' => 'Item deleted successfully']);
     }
 
     private function serialize(Item $item): array
