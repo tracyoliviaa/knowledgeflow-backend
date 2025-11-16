@@ -9,6 +9,11 @@ services:
 
     App\:
         resource: '../src/'
+        exclude:
+            - '../src/DependencyInjection/'
+            - '../src/Entity/'
+            - '../src/Kernel.php'
+            - '../src/Service/Ratelimiter.php'  # Add this to fix the error
 
     App\Service\OpenAIService:
         arguments:
