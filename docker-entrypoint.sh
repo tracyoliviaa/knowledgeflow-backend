@@ -1,56 +1,55 @@
-#!/usr/bin/env bash
-set -euo pipefail
+#!/bin/bash
+set -e
 
-# If APP_SECRET not set, generate temporary one (not for production!)
-: "${APP_SECRET:=}"
-if [ -z "$APP_SECRET" ]; then
-  export APP_SECRET="$(php -r "echo bin2hex(random_bytes(16));")"
-  echo "No APP_SECRET provided — using ephemeral secret (override in Render envs)."
-fi
+echo "🚀 Starting KnowledgeFlow Backend..."
 
-# Ensure config/jwt exists and keys exist; generate only at runtime if missing.
-if [ ! -f config/jwt/private.pem ] || [ ! -f config/jwt/public.pem ]; then
-  echo "JWT keys missing — generating RSA 4096 keys..."
-  mkdir -p config/jwt
-  openssl genpkey -out config/jwt/private.pem -algorithm rsa -pkeyopt rsa_keygen_bits:4096
-  openssl pkey -in config/jwt/private.pem -out config/jwt/public.pem -pubout
-  chown -R www-data:www-data config/jwt
-fi
+# Create .env file from environment variables
+cat > .env << EOF
+APP_ENV=${APP_ENV:-prod}
+APP_SECRET=${APP_SECRET}
+DATABASE_URL=${DATABASE_URL}
+JWT_SECRET_KEY=${JWT_SECRET_KEY:-config/jwt/private.pem}
+JWT_PUBLIC_KEY=${JWT_PUBLIC_KEY:-config/jwt/public.pem}
+JWT_PASSPHRASE=${JWT_PASSPHRASE}
+DEFAULT_URI=${DEFAULT_URI:-http://localhost}
+CORS_ALLOW_ORIGIN=${CORS_ALLOW_ORIGIN:-*}
+EOF
 
-# Wait for database to be reachable (optional, simple loop)
-if [ -n "${DATABASE_URL:-}" ]; then
-  echo "Waiting for database..."
-  # try to use php to open PDO connection (simple check) — retry loop
-  tries=0
-  until php -r "try { new PDO(getenv('DATABASE_URL')); exit(0);} catch (Throwable \$e) { exit(1); }"; do
-    tries=$((tries+1))
-    echo "DB not ready (attempt $tries). Sleeping 2s..."
-    sleep 2
-    if [ "$tries" -ge 60 ]; then
-      echo "Database not ready after multiple attempts. Continuing startup (you may handle migrations externally)."
-      break
-    fi
-  done
-fi
+echo "✅ Environment file created"
 
-# Run migrations safely: attempt, but DO NOT block startup on failure.
-if [ "${RUN_MIGRATIONS:-1}" = "1" ]; then
-  echo "Running migrations (if any)..."
-  set +e
-  php bin/console doctrine:migrations:migrate --no-interaction --allow-no-migration
-  rc=$?
-  set -e
-  if [ $rc -ne 0 ]; then
-    echo "Migrations returned code $rc — continuing startup. Consider running migrations in a controlled deploy hook."
+# Wait for database to be ready (with improved connection check)
+echo "⏳ Waiting for database connection..."
+MAX_TRIES=30
+COUNTER=0
+
+until php bin/console doctrine:query:sql "SELECT 1" > /dev/null 2>&1 || [ $COUNTER -eq $MAX_TRIES ]; do
+  COUNTER=$((COUNTER+1))
+  echo "DB not ready (attempt $COUNTER/$MAX_TRIES). Sleeping 2s..."
+  sleep 2
+done
+
+if [ $COUNTER -eq $MAX_TRIES ]; then
+  echo "⚠️  Database not ready after $MAX_TRIES attempts. Continuing anyway..."
+  echo "   You may need to run migrations manually."
+else
+  echo "✅ Database connection successful!"
+  
+  # Run migrations
+  echo "🔄 Running database migrations..."
+  if php bin/console doctrine:migrations:migrate --no-interaction --allow-no-migration; then
+    echo "✅ Migrations completed successfully"
+  else
+    echo "⚠️  Migrations failed or no migrations to run"
   fi
 fi
 
-# Clear & warm cache in prod if needed (non-blocking)
-if [ "${APP_ENV:-prod}" = "prod" ]; then
-  php bin/console cache:clear --no-warmup --env=prod --no-debug || true
-  php bin/console cache:warmup --env=prod --no-debug || true
-  chown -R www-data:www-data var
-fi
+# Clear and warm up cache
+echo "🔥 Warming up cache..."
+php bin/console cache:clear --no-warmup --env=prod
+php bin/console cache:warmup --env=prod
 
-# Finally exec the container command (Apache)
-exec "$@"
+echo "✅ Cache warmed up successfully"
+
+# Start Apache
+echo "🌐 Starting Apache web server..."
+exec apache2-foreground
