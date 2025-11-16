@@ -53,34 +53,40 @@ ENV APP_ENV=prod
 ENV APP_DEBUG=0
 
 # -------------------------------
-# 8️⃣  Composer-Installation (ohne dev & ohne auto-scripts)
+# 8️⃣  Minimal .env erstellen (WICHTIG!)
 # -------------------------------
-RUN composer install --no-interaction --prefer-dist --no-scripts --no-dev
+RUN echo "APP_ENV=prod" > .env && \
+    echo "APP_SECRET=$(openssl rand -hex 32)" >> .env
 
 # -------------------------------
-# 9️⃣  Symfony-Autoskripte ausführen (cache:clear etc.)
+# 9️⃣  Composer Installation
+# -------------------------------
+RUN composer install --no-interaction --prefer-dist --no-dev
+
+# -------------------------------
+# 🔟  Symfony auto-scripts (cache:clear etc.)
 # -------------------------------
 RUN composer run-script auto-scripts
 
 # -------------------------------
-# 🔄  Clear and warm cache for production
+# 1️⃣1️⃣  Cache vorbereiten
 # -------------------------------
 RUN php bin/console cache:clear --env=prod --no-debug --no-warmup
 RUN php bin/console cache:warmup --env=prod --no-debug
 
 # -------------------------------
-# 🔟  Autoloader optimieren
+# 1️⃣2️⃣  Autoloader optimieren
 # -------------------------------
 RUN composer dump-autoload --optimize --classmap-authoritative
 
 # -------------------------------
-# 1️⃣1️⃣  Dateiberechtigungen setzen
+# 1️⃣3️⃣  Dateiberechtigungen setzen
 # -------------------------------
 RUN mkdir -p var/cache var/log \
     && chown -R www-data:www-data var/ public/
 
 # -------------------------------
-# 1️⃣2️⃣  Apache-Konfiguration aktivieren
+# 1️⃣4️⃣  Apache-Konfiguration aktivieren
 # -------------------------------
 RUN a2enmod rewrite
 
@@ -102,7 +108,7 @@ COPY docker-entrypoint.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
 # -------------------------------
-# 1️⃣3️⃣  Port öffnen & Server starten
+# 1️⃣5️⃣  Port öffnen & Server starten
 # -------------------------------
 EXPOSE 80
 ENTRYPOINT ["docker-entrypoint.sh"]
