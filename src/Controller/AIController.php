@@ -1,66 +1,45 @@
 <?php
-// src/Controller/AIUsageController.php
 
 namespace App\Controller;
 
-use App\Repository\AIUsageRepository;
+use App\Service\OpenAIService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Attribute\Route;
-use Symfony\Component\Security\Http\Attribute\IsGranted;
 
-#[Route('/api/ai')]
-#[IsGranted('ROLE_USER')]
-class AIUsageController extends AbstractController
+class AIController extends AbstractController
 {
-    public function __construct(
-        private AIUsageRepository $usageRepo
-    ) {}
+    private OpenAIService $aiService;
 
-    #[Route('/usage-stats', methods: ['GET'])]
-    public function getUsageStats(): JsonResponse
+    public function __construct(OpenAIService $aiService)
     {
-        $user = $this->getUser();
-
-        // Current month statistics
-        $currentMonthCost = $this->usageRepo->getCurrentMonthCost($user);
-        $currentMonthStats = $this->usageRepo->getCurrentMonthStats($user);
-
-        // All-time statistics
-        $allTimeStats = $this->usageRepo->getTotalStats($user);
-
-        return $this->json([
-            'current_month' => [
-                'total_cost' => $currentMonthCost,
-                'operations' => $currentMonthStats,
-            ],
-            'all_time' => [
-                'total_requests' => (int) $allTimeStats['total_requests'],
-                'total_input_tokens' => (int) $allTimeStats['total_input_tokens'],
-                'total_output_tokens' => (int) $allTimeStats['total_output_tokens'],
-                'total_tokens' => (int) $allTimeStats['total_input_tokens'] + (int) $allTimeStats['total_output_tokens'],
-                'total_cost' => (float) $allTimeStats['total_cost'],
-            ]
-        ]);
+        $this->aiService = $aiService;
     }
 
-    #[Route('/usage-limit', methods: ['GET'])]
-    public function checkUsageLimit(): JsonResponse
+    #[Route('/api/ai/test', name: 'ai_test', methods: ['POST', 'GET'])]
+    public function test(Request $request): JsonResponse
     {
-        $user = $this->getUser();
-        $currentMonthCost = $this->usageRepo->getCurrentMonthCost($user);
+        if ($request->getMethod() === 'GET') {
+            return $this->json([
+                'message' => 'AI Controller works! Use POST with {"text":"..."}'
+            ]);
+        }
 
-        // Example: $10/month limit
-        $limit = 10.00;
-        $remaining = max(0, $limit - $currentMonthCost);
-        $percentage = min(100, ($currentMonthCost / $limit) * 100);
+        $data = json_decode($request->getContent(), true);
+        $text = $data['text'] ?? 'Hallo Welt';
 
-        return $this->json([
-            'limit' => $limit,
-            'used' => $currentMonthCost,
-            'remaining' => $remaining,
-            'percentage' => $percentage,
-            'exceeded' => $currentMonthCost >= $limit,
-        ]);
+        try {
+            $summary = $this->aiService->summarize($text);
+            return $this->json([
+                'success' => true,
+                'summary' => $summary
+            ]);
+        } catch (\Exception $e) {
+            return $this->json([
+                'success' => false,
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 }
